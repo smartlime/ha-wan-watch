@@ -24,6 +24,7 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.ping_error = False
         self.ping_timeout = False
         self.tls_failure = False
+        self.link_down = False
         self.server = await asyncssh.create_server(
             Server, "127.0.0.1", 0, server_host_keys=[self.key], process_factory=self.process
         )
@@ -51,7 +52,11 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         elif args == ["cat", "/proc/uptime"]:
             text = "1234.0 5678.0\n"
         elif args[:3] == ["ip", "link", "show"]:
-            text = "2: ppp0: <POINTOPOINT,UP,LOWER_UP> state UNKNOWN\n"
+            text = (
+                "2: ppp0: <POINTOPOINT> state DOWN\n"
+                if self.link_down
+                else "2: ppp0: <POINTOPOINT,UP,LOWER_UP> state UNKNOWN\n"
+            )
         elif args[0] == "curl":
             code = 28 if self.tls_failure else 0
             text = "WANWATCH 200 0.03\n" if not code else ""
@@ -77,6 +82,12 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         return await transport.collect_router(
             self.router, [self.channel], constants.DEFAULT_TARGETS, 5
         )
+
+    async def test_stale_link_metadata_cannot_override_successful_probe(self):
+        self.link_down = True
+        sample = (await self.collect())["channels"]["standby"]
+        self.assertTrue(sample.reachable)
+        self.assertFalse(sample.link)
 
     async def test_pins_server_key_and_rejects_changed_key(self):
         conn = await transport.connect(self.router)

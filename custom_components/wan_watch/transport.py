@@ -179,7 +179,7 @@ async def collect_router(
                     counters=counter_data.get(interface, {}),
                     error=next((p.error for p in probes if p.success is None), None),
                 )
-                if link is False:
+                if link is False and sample.reachable is None:
                     sample.reachable = False
                 return channel["id"], sample
 

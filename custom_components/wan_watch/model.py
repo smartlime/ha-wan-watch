@@ -124,12 +124,18 @@ def parse_counters(output: str) -> dict[str, dict[str, int]]:
 
 def parse_default_routes(output: str) -> list[str]:
     routes = []
+    current = None
     for line in output.splitlines():
         if not line.startswith("default"):
+            if current is not None and line.lstrip().startswith("nexthop "):
+                routes[current][1].extend(re.findall(r"\bdev ([\w.:-]+)", line))
+            else:
+                current = None
             continue
         metric = re.search(r"\bmetric (\d+)", line)
         devices = re.findall(r"\bdev ([\w.:-]+)", line)
         routes.append((int(metric[1]) if metric else 0, devices))
+        current = len(routes) - 1
     if not routes:
         return []
     best = min(m for m, _ in routes)

@@ -57,6 +57,17 @@ def routers(now, first=True, second=True, quality=None):
 
 
 class ModelTests(unittest.TestCase):
+    def test_linux_wrapped_equal_cost_routes(self):
+        self.assertEqual(
+            model.parse_default_routes(
+                "default proto static metric 10\n"
+                "    nexthop via 192.0.2.1 dev eth0 weight 1\n"
+                "    nexthop via 192.0.2.2 dev eth1 weight 1\n"
+                "192.0.2.0/24 dev eth0 scope link\n"
+            ),
+            ["eth0", "eth1"],
+        )
+
     def test_target_change_starts_new_baseline_without_false_recovery(self):
         c = config()
         e = engine.Engine(c)
