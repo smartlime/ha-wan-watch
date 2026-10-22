@@ -79,7 +79,7 @@ class Engine:
         history = self.histories.setdefault(key, AvailabilityHistory())
         max_gap = self.settings["interval"] * 2
         history.observe(now, state, max_gap)
-        return history.statistics(now, max_gap)
+        return {**history.statistics(now, max_gap), **history.statistics(now, max_gap, 1200)}
 
     def update(self, now: float, routers: dict, local_reachable: bool | None) -> dict:
         self.new_events = []

@@ -5,6 +5,12 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, Sen
 from .entity import WanEntity
 
 CHANNEL_SENSORS = [
+    ("availability_20m", "Доступность за 20 минут", "%", None, None),
+    ("coverage_20m", "Покрытие за 20 минут", "%", None, None),
+    ("downtime_20m", "Простой за 20 минут", "s", SensorDeviceClass.DURATION, None),
+    ("upload_mbps", "Скорость короткой отдачи", "Mbit/s", SensorDeviceClass.DATA_RATE, None),
+    ("upload_status", "Состояние замера отдачи", None, None, None),
+    ("upload_checked_at", "Последний замер отдачи", None, SensorDeviceClass.TIMESTAMP, None),
     ("download_mbps", "Скорость короткой загрузки", "Mbit/s", SensorDeviceClass.DATA_RATE, None),
     ("download_status", "Состояние замера скорости", None, None, None),
     ("download_checked_at", "Последний замер скорости", None, SensorDeviceClass.TIMESTAMP, None),
@@ -98,7 +104,7 @@ class WanSensor(WanEntity, SensorEntity):
     @property
     def native_value(self):
         sample = self.sample
-        if self.key == "download_checked_at":
+        if self.key in ("download_checked_at", "upload_checked_at"):
             stamp = sample.get(self.key)
             return datetime.fromtimestamp(stamp, UTC) if stamp else None
         if self.key == "last_outage_at":

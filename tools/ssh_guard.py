@@ -11,9 +11,10 @@ from commands import (
     ping_command,
     resource_command,
     tls_command,
+    upload_command,
 )
-from const import DEFAULT_DOWNLOAD_TARGET
-from model import INTERFACE_RE, validate_download_target, validate_targets
+from const import DEFAULT_DOWNLOAD_TARGET, DEFAULT_UPLOAD_TARGET
+from model import INTERFACE_RE, validate_download_target, validate_targets, validate_upload_target
 
 
 def generate(config):
@@ -38,6 +39,10 @@ def generate(config):
             if not isinstance(size, int) or not 1000000 <= size <= 20000000:
                 raise ValueError("invalid_download_size")
             commands.append(download_command(channel["interface"], target, size))
+            if config.get("upload_enabled"):
+                upload_target = config.get("upload_target", DEFAULT_UPLOAD_TARGET)
+                validate_upload_target(upload_target)
+                commands.append(upload_command(driver, channel["interface"], upload_target, size))
         for target in config["targets"]:
             commands.extend(
                 [

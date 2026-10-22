@@ -16,6 +16,7 @@ from .commands import (
     ping_command,
     resource_command,
     tls_command,
+    upload_command,
 )
 from .download import parse_download
 from .model import (
@@ -226,3 +227,25 @@ async def collect_download(router, channel, target, size):
         return parse_download(response.stdout, response.exit_status, size)
     except (OSError, asyncssh.Error, TimeoutError, ValueError):
         return {"download_mbps": None, "download_status": "failed"}
+
+
+async def collect_upload(router, channel, target, size):
+    try:
+        async with await connect(router) as conn:
+            version = await command(conn, ["curl", "--disable", "--version"], 5)
+            match = re.match(r"curl (\d+)\.(\d+)\.(\d+)", version.stdout)
+            if version.exit_status or not match or tuple(map(int, match.groups())) < (8, 4, 0):
+                return {
+                    "upload_mbps": None,
+                    "upload_status": "failed",
+                    "upload_error": "curl_8_4_required",
+                }
+            response = await command(
+                conn, upload_command(router["driver"], channel["interface"], target, size), 23
+            )
+        result = parse_download(
+            response.stdout.replace("WANUP ", "WANDOWN "), response.exit_status, size
+        )
+        return {key.replace("download_", "upload_"): value for key, value in result.items()}
+    except (OSError, asyncssh.Error, TimeoutError, ValueError):
+        return {"upload_mbps": None, "upload_status": "failed"}

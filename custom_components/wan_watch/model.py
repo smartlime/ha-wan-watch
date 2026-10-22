@@ -274,9 +274,12 @@ class AvailabilityHistory:
         while len(self.points) > 1 and self.points[1][0] < cutoff:
             self.points.pop(0)
 
-    def statistics(self, now: float, max_gap: float) -> dict[str, float | None]:
+    def statistics(
+        self, now: float, max_gap: float, window: int = 86400
+    ) -> dict[str, float | None]:
         up = down = 0.0
-        cutoff = now - 86400
+        cutoff = now - window
+        suffix = "24h" if window == 86400 else "20m"
         for index, (start, state) in enumerate(self.points):
             end = self.points[index + 1][0] if index + 1 < len(self.points) else now
             duration = max(0.0, min(now, end, start + max_gap) - max(start, cutoff))
@@ -286,9 +289,9 @@ class AvailabilityHistory:
                 down += duration
         known = up + down
         return {
-            "availability_24h": round(100 * up / known, 3) if known else None,
-            "coverage_24h": round(100 * known / 86400, 3),
-            "downtime_24h": round(down, 1),
+            f"availability_{suffix}": round(100 * up / known, 3) if known else None,
+            f"coverage_{suffix}": round(100 * known / window, 3),
+            f"downtime_{suffix}": round(down, 1),
         }
 
 
@@ -317,3 +320,9 @@ def validate_download_target(target):
         raise ValueError("invalid_download_path")
     if "{" in path.replace("{bytes}", "") or "}" in path.replace("{bytes}", ""):
         raise ValueError("invalid_download_path")
+
+
+def validate_upload_target(target):
+    validate_targets([target])
+    if not re.fullmatch(r"/[a-zA-Z0-9_./?=&%-]+", target.get("path", "")):
+        raise ValueError("invalid_upload_path")

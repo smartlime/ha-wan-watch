@@ -1,6 +1,6 @@
 [project]
 name = "ha-wan-watch"
-version = "0.2.0"
+version = "0.2.1"
 description = "Independent multi-router internet availability and quality monitoring for Home Assistant"
 requires-python = ">=3.14"
 dependencies = []

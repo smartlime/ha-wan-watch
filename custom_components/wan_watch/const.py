@@ -26,6 +26,7 @@ DEFAULT_SETTINGS = {
     "alert_channels": [],
     "alert_types": ["outage", "recovery", "route_changed", "internet_down", "internet_up"],
     "persistent_notifications": True,
+    "upload_enabled": False,
     "download_channels": [],
     "download_interval": 10800,
     "download_bytes": 5000000,
@@ -37,3 +38,5 @@ DEFAULT_DOWNLOAD_TARGET = {
     "server_name": "speed.cloudflare.com",
     "path": "/__down?bytes={bytes}",
 }
+
+DEFAULT_UPLOAD_TARGET = {**DEFAULT_DOWNLOAD_TARGET, "path": "/__up"}

@@ -63,3 +63,24 @@ class ResourceDownloadTests(unittest.TestCase):
         for path in ["/x;id?bytes={bytes}", "/x?b={other}"]:
             with self.assertRaises(ValueError):
                 model.validate_download_target({**constants.DEFAULT_DOWNLOAD_TARGET, "path": path})
+
+    def test_short_window_clips_old_outage_and_tracks_unknown_time(self):
+        history = model.AvailabilityHistory([[0, False], [1000, True], [1500, None], [1800, True]])
+        stats = history.statistics(2000, 1000, 1200)
+        self.assertEqual(stats["downtime_20m"], 200)
+        self.assertAlmostEqual(stats["availability_20m"], 700 / 9, places=3)
+        self.assertEqual(stats["coverage_20m"], 75)
+
+    def test_upload_source_is_bounded_and_contains_no_local_files(self):
+        import shlex
+
+        args = commands.upload_command("keenetic", "ppp0", constants.DEFAULT_UPLOAD_TARGET, 5000000)
+        self.assertEqual(args[:2], ["sh", "-c"])
+        source, request = args[2].split(" | ")
+        self.assertEqual(
+            shlex.split(source), ["/opt/bin/busybox", "head", "-c", "5000000", "/dev/zero"]
+        )
+        curl = shlex.split(request)
+        self.assertEqual(curl[curl.index("--interface") + 1], "if!ppp0")
+        self.assertEqual(curl[curl.index("--data-binary") + 1], "@-")
+        self.assertEqual(curl[curl.index("--max-time") + 1], "20")

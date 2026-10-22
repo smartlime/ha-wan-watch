@@ -157,3 +157,26 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         c.settings["download_channels"] = []
         c._attach_downloads(data)
         self.assertEqual(data["channels"]["first"]["download_status"], "disabled")
+
+    async def test_upload_is_independent_of_failed_download_and_schedule_is_shared(self):
+        c = self.coordinator
+        c.config["routers"][0]["host"] = "192.0.2.1"
+        c.settings.update(download_channels=["first"], upload_enabled=True, download_interval=600)
+        with (
+            patch.object(
+                coordinator_module,
+                "collect_download",
+                AsyncMock(return_value={"download_status": "failed", "download_mbps": None}),
+            ),
+            patch.object(
+                coordinator_module,
+                "collect_upload",
+                AsyncMock(return_value={"upload_status": "ok", "upload_mbps": 10}),
+            ) as upload,
+        ):
+            await c._download_due()
+            await c.async_load()
+            await c._download_due()
+            self.assertEqual(upload.await_count, 1)
+        self.assertEqual(c.downloads["first"]["upload_mbps"], 10)
+        self.assertIsNone(c.downloads["first"]["download_mbps"])

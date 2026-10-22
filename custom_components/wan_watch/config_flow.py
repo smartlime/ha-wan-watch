@@ -9,8 +9,21 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import DEFAULT_DOWNLOAD_TARGET, DEFAULT_SETTINGS, DEFAULT_TARGETS, DOMAIN, EVENT_TYPES
-from .model import ID_RE, validate_download_target, validate_targets, validate_topology
+from .const import (
+    DEFAULT_DOWNLOAD_TARGET,
+    DEFAULT_SETTINGS,
+    DEFAULT_TARGETS,
+    DEFAULT_UPLOAD_TARGET,
+    DOMAIN,
+    EVENT_TYPES,
+)
+from .model import (
+    ID_RE,
+    validate_download_target,
+    validate_targets,
+    validate_topology,
+    validate_upload_target,
+)
 from .transport import connect, discover_fingerprint
 
 
@@ -233,6 +246,7 @@ class Wizard:
             try:
                 validate_targets(user_input["targets"])
                 validate_download_target(user_input.get("download_target", DEFAULT_DOWNLOAD_TARGET))
+                validate_upload_target(user_input.get("upload_target", DEFAULT_UPLOAD_TARGET))
             except (ValueError, KeyError, TypeError, ipaddress.AddressValueError):
                 errors["base"] = "invalid_targets"
             else:
@@ -268,11 +282,15 @@ class Wizard:
             field("alert_types", settings["alert_types"]): select(EVENT_TYPES, True),
             field("persistent_notifications", settings["persistent_notifications"]): bool,
             field("targets", self.config["targets"]): selector.ObjectSelector(),
+            field("upload_enabled", settings["upload_enabled"]): bool,
+            field(
+                "upload_target", settings.get("upload_target", DEFAULT_UPLOAD_TARGET)
+            ): selector.ObjectSelector(),
             field("download_channels", settings["download_channels"]): select(
                 [{"value": c["id"], "label": c["name"]} for c in self.config["channels"]], True
             ),
             field("download_interval", settings["download_interval"]): vol.All(
-                vol.Coerce(int), vol.Range(min=3600, max=604800)
+                vol.Coerce(int), vol.Range(min=600, max=604800)
             ),
             field("download_bytes", settings["download_bytes"]): vol.All(
                 vol.Coerce(int), vol.Range(min=1000000, max=20000000)

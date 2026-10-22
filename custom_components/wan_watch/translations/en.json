@@ -69,7 +69,9 @@
           "download_channels": "Channels for bounded download",
           "download_interval": "Download interval (seconds)",
           "download_bytes": "Download size (bytes)",
-          "download_target": "Download target: address, port, server_name, path with {bytes}"
+          "download_target": "Download target: address, port, server_name, path with {bytes}",
+          "upload_enabled": "Measure upload",
+          "upload_target": "Upload target"
         }
       },
       "remove_router": {
@@ -176,7 +178,9 @@
           "download_channels": "Channels for bounded download",
           "download_interval": "Download interval (seconds)",
           "download_bytes": "Download size (bytes)",
-          "download_target": "Download target: address, port, server_name, path with {bytes}"
+          "download_target": "Download target: address, port, server_name, path with {bytes}",
+          "upload_enabled": "Measure upload",
+          "upload_target": "Upload target"
         }
       },
       "remove_router": {
@@ -299,6 +303,24 @@
       },
       "download_checked_at": {
         "name": "Last download measurement"
+      },
+      "availability_20m": {
+        "name": "Availability over 20 minutes"
+      },
+      "coverage_20m": {
+        "name": "Measurement coverage over 20 minutes"
+      },
+      "downtime_20m": {
+        "name": "Downtime over 20 minutes"
+      },
+      "upload_mbps": {
+        "name": "Short upload speed"
+      },
+      "upload_status": {
+        "name": "Upload measurement status"
+      },
+      "upload_checked_at": {
+        "name": "Last upload measurement"
       }
     },
     "binary_sensor": {

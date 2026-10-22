@@ -10,11 +10,11 @@ from zoneinfo import ZoneInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DEFAULT_DOWNLOAD_TARGET, DEFAULT_SETTINGS, DOMAIN
+from .const import DEFAULT_DOWNLOAD_TARGET, DEFAULT_SETTINGS, DEFAULT_UPLOAD_TARGET, DOMAIN
 from .engine import Engine, event_selected, format_event
 from .model import reachability
 from .resources import cpu_percent
-from .transport import collect_download, collect_router, local_availability
+from .transport import collect_download, collect_router, collect_upload, local_availability
 
 LOGGER = logging.getLogger(__name__)
 
@@ -119,6 +119,8 @@ class WanCoordinator(DataUpdateCoordinator):
             channel["interface"],
             self.settings.get("download_target", DEFAULT_DOWNLOAD_TARGET),
             self.settings["download_bytes"],
+            self.settings["upload_enabled"],
+            self.settings.get("upload_target", DEFAULT_UPLOAD_TARGET),
         ]
 
     def _attach_downloads(self, data):
@@ -142,6 +144,25 @@ class WanCoordinator(DataUpdateCoordinator):
             sample["download_status"] = status
             if status != "ok":
                 sample["download_mbps"] = None
+            upload_status = cached.get("upload_status", "not_measured")
+            if (
+                not self.settings["upload_enabled"]
+                or channel["id"] not in self.settings["download_channels"]
+            ):
+                upload_status = "disabled"
+            elif cached.get("signature") != self._download_signature(channel):
+                upload_status = "not_measured"
+            elif upload_status == "running" and (
+                self.download_task is None or self.download_task.done()
+            ):
+                upload_status = "interrupted"
+            elif (
+                now - cached.get("upload_checked_at", 0) > self.settings["download_interval"] + 120
+            ):
+                upload_status = "stale"
+            sample["upload_status"] = upload_status
+            if upload_status != "ok":
+                sample["upload_mbps"] = None
 
     async def _download_due(self):
         for channel in self.config["channels"]:
@@ -169,6 +190,18 @@ class WanCoordinator(DataUpdateCoordinator):
                 self.settings["download_bytes"],
             )
             self.downloads[cid].update(result)
+            if self.settings["upload_enabled"]:
+                self.downloads[cid].update(
+                    upload_status="running", upload_checked_at=time.time(), upload_mbps=None
+                )
+                await self.store.async_save(self._stored())
+                upload = await collect_upload(
+                    router,
+                    channel,
+                    self.settings.get("upload_target", DEFAULT_UPLOAD_TARGET),
+                    self.settings["download_bytes"],
+                )
+                self.downloads[cid].update(upload)
             await self.store.async_save(self._stored())
             if self.data:
                 self._attach_downloads(self.data)

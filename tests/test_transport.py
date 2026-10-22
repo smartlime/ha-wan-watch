@@ -60,6 +60,8 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
             )
         elif args == ["curl", "--disable", "--version"]:
             text = f"curl {self.curl_version} test\n"
+        elif args[:2] == ["sh", "-c"]:
+            text = "WANUP 200 5000000 1250000 4\n"
         elif "--max-filesize" in args:
             text = "WANDOWN 200 5000000 2500000 2\n"
         elif args[0] == "curl":
@@ -150,3 +152,11 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result["download_error"], "curl_8_4_required")
         self.assertEqual(len(self.commands), 1)
+
+    async def test_upload_reports_only_complete_success(self):
+        result = await transport.collect_upload(
+            self.router, self.channel, constants.DEFAULT_UPLOAD_TARGET, 5000000
+        )
+        self.assertEqual(result["upload_mbps"], 10)
+        self.assertEqual(result["upload_bytes"], 5000000)
+        self.assertEqual(result["upload_status"], "ok")

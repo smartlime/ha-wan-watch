@@ -69,7 +69,9 @@
           "download_channels": "Каналы для короткой загрузки",
           "download_interval": "Интервал загрузки, секунды",
           "download_bytes": "Объём загрузки, байты",
-          "download_target": "Сервер загрузки: адрес, порт, имя, путь с {bytes}"
+          "download_target": "Сервер загрузки: адрес, порт, имя, путь с {bytes}",
+          "upload_enabled": "Проверять отдачу",
+          "upload_target": "Сервер отдачи"
         }
       },
       "remove_router": {
@@ -176,7 +178,9 @@
           "download_channels": "Каналы для короткой загрузки",
           "download_interval": "Интервал загрузки, секунды",
           "download_bytes": "Объём загрузки, байты",
-          "download_target": "Сервер загрузки: адрес, порт, имя, путь с {bytes}"
+          "download_target": "Сервер загрузки: адрес, порт, имя, путь с {bytes}",
+          "upload_enabled": "Проверять отдачу",
+          "upload_target": "Сервер отдачи"
         }
       },
       "remove_router": {
@@ -299,6 +303,24 @@
       },
       "download_checked_at": {
         "name": "Последний замер скорости"
+      },
+      "availability_20m": {
+        "name": "Доступность за 20 минут"
+      },
+      "coverage_20m": {
+        "name": "Покрытие за 20 минут"
+      },
+      "downtime_20m": {
+        "name": "Простой за 20 минут"
+      },
+      "upload_mbps": {
+        "name": "Скорость короткой отдачи"
+      },
+      "upload_status": {
+        "name": "Состояние замера отдачи"
+      },
+      "upload_checked_at": {
+        "name": "Последний замер отдачи"
       }
     },
     "binary_sensor": {
