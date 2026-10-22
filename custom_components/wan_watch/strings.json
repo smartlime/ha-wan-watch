@@ -1,0 +1,296 @@
+{
+  "title": "WAN Watch",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a monitored network",
+        "data": {
+          "name": "Network name"
+        }
+      },
+      "choose_router": {
+        "title": "Add or edit a router",
+        "data": {
+          "router": "Router"
+        }
+      },
+      "router": {
+        "title": "Router connection",
+        "data": {
+          "id": "Stable identifier",
+          "name": "Network name",
+          "host": "Router address",
+          "port": "SSH port",
+          "driver": "Router driver",
+          "username": "SSH username",
+          "password": "Password (blank keeps existing)",
+          "private_key": "SSH private key (blank keeps existing)"
+        },
+        "description": "Keenetic requires an SSH shell with Entware, BusyBox and curl. Credentials stay in Home Assistant config entry storage."
+      },
+      "trust": {
+        "title": "Verify the SSH server key",
+        "data": {
+          "confirm": "Trust this host key"
+        },
+        "description": "Server {host} presents `{fingerprint}`. Compare this fingerprint with a trusted SSH connection before accepting."
+      },
+      "choose_channel": {
+        "title": "Add or edit a channel",
+        "data": {
+          "channel": "Channel"
+        }
+      },
+      "channel": {
+        "title": "Channel and topology",
+        "data": {
+          "id": "Stable identifier",
+          "name": "Network name",
+          "router_id": "Router that owns the interface",
+          "interface": "Linux interface, e.g. eth0 or ppp0",
+          "logical_interface": "Keenetic interface, e.g. PPTP0 (optional)",
+          "upstream_router": "Next router, or Provider for a direct ISP"
+        }
+      },
+      "settings": {
+        "title": "Probes and notifications",
+        "data": {
+          "egress_router": "Router directly serving Home Assistant",
+          "interval": "Collection interval (seconds)",
+          "confirm_samples": "Consecutive samples to confirm changes",
+          "ping_count": "Pings per target and channel",
+          "loss_threshold": "Degraded quality: loss threshold (%)",
+          "latency_threshold": "Degraded quality: latency threshold (ms)",
+          "notify_entities": "Notification entities (optional)",
+          "alert_channels": "Channels to notify about (empty disables alerts)",
+          "alert_types": "Event types to notify about",
+          "persistent_notifications": "Show notifications in Home Assistant",
+          "targets": "IPv4 targets: address, port, server_name"
+        }
+      },
+      "remove_router": {
+        "title": "Remove a router",
+        "data": {
+          "router": "Router"
+        }
+      },
+      "remove_channel": {
+        "title": "Remove a channel",
+        "data": {
+          "channel": "Channel"
+        }
+      },
+      "menu": {
+        "title": "Configure WAN Watch",
+        "menu_options": {
+          "choose_router": "Add or edit a router",
+          "choose_channel": "Add or edit a channel",
+          "settings": "Probes and notifications",
+          "remove_router": "Remove a router",
+          "remove_channel": "Remove a channel",
+          "finish": "Save configuration"
+        }
+      }
+    },
+    "error": {
+      "invalid_id": "Use lowercase letters, digits and underscores; start with a letter.",
+      "duplicate_id": "Identifiers must be unique across routers and channels.",
+      "duplicate_interface": "This router interface already has a channel.",
+      "immutable_id": "An existing identifier cannot be renamed.",
+      "credentials_required": "Provide a password or private key.",
+      "cannot_connect": "Cannot read the SSH server key. Check address and port.",
+      "cannot_authenticate": "SSH authentication or host key verification failed.",
+      "invalid_interface": "Use a valid interface name without whitespace or shell syntax.",
+      "missing_router": "The referenced router does not exist.",
+      "topology_cycle": "Router topology must not contain cycles.",
+      "invalid_driver": "Unsupported router driver.",
+      "invalid_router": "Check router address and port.",
+      "router_in_use": "Remove dependent channels or select another egress router first.",
+      "invalid_targets": "Provide 1 to 8 IPv4 targets with address, port and server_name."
+    }
+  },
+  "options": {
+    "step": {
+      "choose_router": {
+        "title": "Add or edit a router",
+        "data": {
+          "router": "Router"
+        }
+      },
+      "router": {
+        "title": "Router connection",
+        "data": {
+          "id": "Stable identifier",
+          "name": "Network name",
+          "host": "Router address",
+          "port": "SSH port",
+          "driver": "Router driver",
+          "username": "SSH username",
+          "password": "Password (blank keeps existing)",
+          "private_key": "SSH private key (blank keeps existing)"
+        },
+        "description": "Keenetic requires an SSH shell with Entware, BusyBox and curl. Credentials stay in Home Assistant config entry storage."
+      },
+      "trust": {
+        "title": "Verify the SSH server key",
+        "data": {
+          "confirm": "Trust this host key"
+        },
+        "description": "Server {host} presents `{fingerprint}`. Compare this fingerprint with a trusted SSH connection before accepting."
+      },
+      "choose_channel": {
+        "title": "Add or edit a channel",
+        "data": {
+          "channel": "Channel"
+        }
+      },
+      "channel": {
+        "title": "Channel and topology",
+        "data": {
+          "id": "Stable identifier",
+          "name": "Network name",
+          "router_id": "Router that owns the interface",
+          "interface": "Linux interface, e.g. eth0 or ppp0",
+          "logical_interface": "Keenetic interface, e.g. PPTP0 (optional)",
+          "upstream_router": "Next router, or Provider for a direct ISP"
+        }
+      },
+      "settings": {
+        "title": "Probes and notifications",
+        "data": {
+          "egress_router": "Router directly serving Home Assistant",
+          "interval": "Collection interval (seconds)",
+          "confirm_samples": "Consecutive samples to confirm changes",
+          "ping_count": "Pings per target and channel",
+          "loss_threshold": "Degraded quality: loss threshold (%)",
+          "latency_threshold": "Degraded quality: latency threshold (ms)",
+          "notify_entities": "Notification entities (optional)",
+          "alert_channels": "Channels to notify about (empty disables alerts)",
+          "alert_types": "Event types to notify about",
+          "persistent_notifications": "Show notifications in Home Assistant",
+          "targets": "IPv4 targets: address, port, server_name"
+        }
+      },
+      "remove_router": {
+        "title": "Remove a router",
+        "data": {
+          "router": "Router"
+        }
+      },
+      "remove_channel": {
+        "title": "Remove a channel",
+        "data": {
+          "channel": "Channel"
+        }
+      },
+      "menu": {
+        "title": "Configure WAN Watch",
+        "menu_options": {
+          "choose_router": "Add or edit a router",
+          "choose_channel": "Add or edit a channel",
+          "settings": "Probes and notifications",
+          "remove_router": "Remove a router",
+          "remove_channel": "Remove a channel",
+          "finish": "Save configuration"
+        }
+      }
+    },
+    "error": {
+      "invalid_id": "Use lowercase letters, digits and underscores; start with a letter.",
+      "duplicate_id": "Identifiers must be unique across routers and channels.",
+      "duplicate_interface": "This router interface already has a channel.",
+      "immutable_id": "An existing identifier cannot be renamed.",
+      "credentials_required": "Provide a password or private key.",
+      "cannot_connect": "Cannot read the SSH server key. Check address and port.",
+      "cannot_authenticate": "SSH authentication or host key verification failed.",
+      "invalid_interface": "Use a valid interface name without whitespace or shell syntax.",
+      "missing_router": "The referenced router does not exist.",
+      "topology_cycle": "Router topology must not contain cycles.",
+      "invalid_driver": "Unsupported router driver.",
+      "invalid_router": "Check router address and port.",
+      "router_in_use": "Remove dependent channels or select another egress router first.",
+      "invalid_targets": "Provide 1 to 8 IPv4 targets with address, port and server_name."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "loss": {
+        "name": "Packet loss"
+      },
+      "latency": {
+        "name": "Latency"
+      },
+      "jitter": {
+        "name": "Jitter"
+      },
+      "quality_state": {
+        "name": "Link quality"
+      },
+      "ping_check": {
+        "name": "Router Ping Check"
+      },
+      "availability_24h": {
+        "name": "Availability over 24 hours"
+      },
+      "coverage_24h": {
+        "name": "Measurement coverage over 24 hours"
+      },
+      "downtime_24h": {
+        "name": "Downtime over 24 hours"
+      },
+      "rx_bytes": {
+        "name": "Received data"
+      },
+      "tx_bytes": {
+        "name": "Transmitted data"
+      },
+      "rx_errors": {
+        "name": "Receive errors"
+      },
+      "tx_errors": {
+        "name": "Transmit errors"
+      },
+      "rx_drops": {
+        "name": "Receive drops"
+      },
+      "tx_drops": {
+        "name": "Transmit drops"
+      },
+      "last_outage_at": {
+        "name": "Last outage"
+      },
+      "uptime": {
+        "name": "Uptime"
+      },
+      "active_providers": {
+        "name": "Active provider"
+      },
+      "notification_queue": {
+        "name": "Queued notifications"
+      }
+    },
+    "binary_sensor": {
+      "available": {
+        "name": "Internet available"
+      },
+      "link": {
+        "name": "Physical link"
+      },
+      "measurement_valid": {
+        "name": "Availability measurement valid"
+      },
+      "quality_valid": {
+        "name": "Quality measurement valid"
+      },
+      "measured": {
+        "name": "Router collection working"
+      },
+      "internet": {
+        "name": "Internet from Home Assistant"
+      },
+      "internet_measurement_valid": {
+        "name": "Internet measurement valid"
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+import json
+import shlex
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "wan_watch"))
+from commands import link_command, metadata_commands, ping_command, tls_command
+from model import INTERFACE_RE, validate_targets
+
+
+def generate(config):
+    driver = config["driver"]
+    if driver not in ("linux", "keenetic") or not 2 <= config["ping_count"] <= 20:
+        raise ValueError("invalid_probe_configuration")
+    validate_targets(config["targets"])
+    commands = metadata_commands(driver)
+    if driver == "keenetic":
+        commands.append(["ndmc", "-c", "show ping-check"])
+    for channel in config["channels"]:
+        for key in ("interface", "logical_interface"):
+            if channel.get(key) and not INTERFACE_RE.fullmatch(channel[key]):
+                raise ValueError("invalid_interface")
+        commands.append(link_command(driver, channel))
+        for target in config["targets"]:
+            commands.extend(
+                [
+                    tls_command(channel["interface"], target),
+                    ping_command(driver, channel["interface"], target, config["ping_count"]),
+                ]
+            )
+    lines = ["#!/bin/sh", "LC_ALL=C", "export LC_ALL", 'case "$SSH_ORIGINAL_COMMAND" in']
+    for command in sorted({shlex.join(args) for args in commands}):
+        lines.append(f"  {shlex.quote('LC_ALL=C ' + command)}) exec {command} ;;")
+    lines.extend(["  *) exit 126 ;;", "esac", ""])
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    sys.stdout.write(generate(json.load(sys.stdin)))
