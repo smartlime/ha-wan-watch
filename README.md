@@ -15,6 +15,8 @@ WAN Watch monitors individual internet connections, router chains and the intern
 | Router Ping Check | The router's own health-check opinion, kept separate from the independent checks. |
 | Availability, downtime and coverage over 24 hours | Availability excludes unobserved time. Coverage exposes how much of the window was actually measured. |
 | Interface counters and router uptime | Traffic, errors, drops and reboot evidence. |
+| Router resources | CPU utilization between polls, memory used/available/total and one-minute load average. |
+| Bounded download | Opt-in, interface-pinned HTTPS download with separate result validity and measurement time. |
 | Last outage | The latest confirmed outage, with recovery time when observed. |
 
 Availability is measured using IPv4 TLS/HTTPS endpoints with DNS resolution bypassed. It proves access to those endpoints, not every website or DNS service. Quality averages include every configured target. Per-target results are available in the status API. Jitter is the mean absolute difference between consecutive reply times within each target, then averaged across targets.
@@ -50,6 +52,18 @@ Open **Settings > Devices & services > Add integration > WAN Watch**.
 Each target has `address`, `port` and `server_name`. The address must be IPv4. The server must support valid public TLS certificates and HTTPS HEAD requests. Defaults use three endpoints across two operators. Some networks block HTTPS to public DNS addresses; the third target is an ordinary website. Targets are configurable because no endpoint is reachable from every network. The probe validates certificates and never disables host-key or TLS verification.
 
 Configuration can be edited through the integration's options. Identifiers are stable entity identities; renaming a display name does not change them.
+
+## Router resources and bounded downloads
+
+CPU utilization is calculated from successive `/proc/stat` samples. The first sample after startup or a router reboot has no CPU percentage. Memory use excludes memory reported as available by the kernel; older kernels use free memory, buffers and reclaimable cache. Load average is a task count, not CPU percentage. Failure to read optional resource files does not invalidate independent channel probes.
+
+A bounded download is disabled by default. In options, select channels, a size (1-20 MB), an interval (at least one hour) and an HTTPS endpoint. The default requests 5,000,000 bytes from Cloudflare every three hours per selected channel. Two channels consume about 80 MB/day of payload, plus protocol overhead. Tests run sequentially in a background task, independently of availability polling. No upload test or automatic retries run. Attempts are stored before execution so reloads and restarts preserve the interval, including after a failure.
+
+The endpoint object contains `address`, `port`, `server_name`, and `path`, with one `{bytes}` placeholder. The IP address is pinned to avoid relying on the active provider's DNS. The default address may need updating if the endpoint moves. The request binds strictly to the selected interface, verifies TLS, disables proxies and redirects, writes to `/dev/null`, and stops after 20 seconds. **curl 8.4.0 or later is required for bounded downloads** so the size cap also applies when the response has no known length. A range header and maximum file size both limit the response. No test files are stored on the router.
+
+Only a complete HTTP 200/206 response of exactly the requested size yields a speed value. Partial responses, timeouts and HTTP errors produce `failed` with unavailable speed, never zero speed or an internet outage. A result older than the interval plus two minutes becomes `stale`. Status and timestamp entities distinguish a previous short test from current connectivity. Measurements include connection setup and server performance; a small single-stream download is not a maximum-capacity benchmark. Reference: [curl options](https://curl.se/docs/manpage.html) and [Cloudflare measurement API](https://github.com/cloudflare/speedtest).
+
+When using the exact-command SSH guard, regenerate it after enabling downloads or changing their endpoint/size. Set `download: true` on selected guard channels and optionally set top-level `download_target` and `download_bytes`; these must match integration options. New resource readings also require the updated guard. Existing keys and credentials remain unchanged.
 
 ## Notifications
 

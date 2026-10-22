@@ -10,6 +10,41 @@ def metadata_commands(driver: str) -> list[list[str]]:
     ]
 
 
+def resource_command() -> list[str]:
+    return ["cat", "/proc/stat", "/proc/meminfo", "/proc/loadavg"]
+
+
+def download_command(interface: str, target: dict, size: int) -> list[str]:
+    host, port = target["server_name"], target["port"]
+    return [
+        "curl",
+        "--disable",
+        "-4",
+        "--noproxy",
+        "*",
+        "--interface",
+        f"if!{interface}",
+        "--resolve",
+        f"{host}:{port}:{target['address']}",
+        "--connect-timeout",
+        "3",
+        "--max-time",
+        "20",
+        "--max-filesize",
+        str(size),
+        "--range",
+        f"0-{size - 1}",
+        "--header",
+        "Accept-Encoding: identity",
+        "--silent",
+        "--output",
+        "/dev/null",
+        "--write-out",
+        "WANDOWN %{http_code} %{size_download} %{speed_download} %{time_total}\\n",
+        f"https://{host}:{port}{target['path'].replace('{bytes}', str(size))}",
+    ]
+
+
 def link_command(driver: str, channel: dict) -> list[str]:
     if driver == "keenetic" and channel.get("logical_interface"):
         return ["ndmc", "-c", f"show interface {channel['logical_interface']}"]

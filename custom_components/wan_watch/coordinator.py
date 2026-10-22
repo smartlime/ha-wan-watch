@@ -10,10 +10,11 @@ from zoneinfo import ZoneInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import DEFAULT_DOWNLOAD_TARGET, DEFAULT_SETTINGS, DOMAIN
 from .engine import Engine, event_selected, format_event
 from .model import reachability
-from .transport import collect_router, local_availability
+from .resources import cpu_percent
+from .transport import collect_download, collect_router, local_availability
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +23,11 @@ class WanCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
         self.entry = entry
         self.config = dict(entry.data)
-        self.settings = self.config["settings"]
+        self.settings = {**DEFAULT_SETTINGS, **self.config["settings"]}
+        self.config["settings"] = self.settings
+        self.downloads = {}
+        self.download_task = None
+        self.previous_routers = {}
         self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self.engine = Engine(self.config)
         self.pending: list[dict] = []
@@ -41,9 +46,14 @@ class WanCoordinator(DataUpdateCoordinator):
         saved = await self.store.async_load() or {}
         self.engine = Engine(self.config, saved.get("engine"))
         self.pending = [e for e in saved.get("pending", []) if event_selected(e, self.settings)]
+        self.downloads = saved.get("downloads", {})
 
     def _stored(self):
-        return {"engine": self.engine.export(), "pending": self.pending}
+        return {
+            "engine": self.engine.export(),
+            "pending": self.pending,
+            "downloads": self.downloads,
+        }
 
     async def _async_update_data(self):
         targets = self.config["targets"]
@@ -68,7 +78,18 @@ class WanCoordinator(DataUpdateCoordinator):
 
         tasks = [router_task(router) for router in self.config["routers"]]
         results = await asyncio.gather(*tasks, local_availability(targets))
-        data = self.engine.update(time.time(), dict(results[:-1]), reachability(results[-1]))
+        router_data = dict(results[:-1])
+        for rid, value in router_data.items():
+            value["cpu_percent"] = cpu_percent(self.previous_routers.get(rid, {}), value)
+        self.previous_routers = router_data
+        data = self.engine.update(time.time(), router_data, reachability(results[-1]))
+        self._attach_downloads(data)
+        if self.settings["download_channels"] and (
+            self.download_task is None or self.download_task.done()
+        ):
+            self.download_task = self.entry.async_create_background_task(
+                self.hass, self._download_due(), "WAN Watch bounded downloads"
+            )
         selected = [
             event for event in self.engine.new_events if event_selected(event, self.settings)
         ]
@@ -90,6 +111,68 @@ class WanCoordinator(DataUpdateCoordinator):
                 self.hass, self._deliver(), "WAN Watch notifications"
             )
         return data
+
+    def _download_signature(self, channel):
+        router = next(r for r in self.config["routers"] if r["id"] == channel["router_id"])
+        return [
+            router["host"],
+            channel["interface"],
+            self.settings.get("download_target", DEFAULT_DOWNLOAD_TARGET),
+            self.settings["download_bytes"],
+        ]
+
+    def _attach_downloads(self, data):
+        now = time.time()
+        for channel in self.config["channels"]:
+            sample = data["channels"].get(channel["id"], {})
+            cached = self.downloads.get(channel["id"], {})
+            status = cached.get("download_status", "not_measured")
+            if channel["id"] not in self.settings["download_channels"]:
+                status = "disabled"
+            elif cached.get("signature") != self._download_signature(channel):
+                status = "not_measured"
+            elif status == "running" and (self.download_task is None or self.download_task.done()):
+                status = "interrupted"
+            elif (
+                now - cached.get("download_checked_at", 0)
+                > self.settings["download_interval"] + 120
+            ):
+                status = "stale"
+            sample.update({k: v for k, v in cached.items() if k != "signature"})
+            sample["download_status"] = status
+            if status != "ok":
+                sample["download_mbps"] = None
+
+    async def _download_due(self):
+        for channel in self.config["channels"]:
+            cid = channel["id"]
+            if cid not in self.settings["download_channels"]:
+                continue
+            cached = self.downloads.get(cid, {})
+            if (
+                time.time() - cached.get("download_checked_at", 0)
+                < self.settings["download_interval"]
+            ):
+                continue
+            router = next(r for r in self.config["routers"] if r["id"] == channel["router_id"])
+            self.downloads[cid] = {
+                "signature": self._download_signature(channel),
+                "download_checked_at": time.time(),
+                "download_status": "running",
+                "download_mbps": None,
+            }
+            await self.store.async_save(self._stored())
+            result = await collect_download(
+                router,
+                channel,
+                self.settings.get("download_target", DEFAULT_DOWNLOAD_TARGET),
+                self.settings["download_bytes"],
+            )
+            self.downloads[cid].update(result)
+            await self.store.async_save(self._stored())
+            if self.data:
+                self._attach_downloads(self.data)
+                self.async_set_updated_data(self.data)
 
     async def _deliver(self):
         events = self.pending[:10]
@@ -131,6 +214,10 @@ class WanCoordinator(DataUpdateCoordinator):
             self.retry_delay = min(600, self.retry_delay * 2)
 
     async def async_close(self):
+        if self.download_task and not self.download_task.done():
+            self.download_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self.download_task
         if self.notification_task and not self.notification_task.done():
             self.notification_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

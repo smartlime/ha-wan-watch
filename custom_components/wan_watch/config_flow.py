@@ -9,8 +9,8 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import DEFAULT_SETTINGS, DEFAULT_TARGETS, DOMAIN, EVENT_TYPES
-from .model import ID_RE, validate_targets, validate_topology
+from .const import DEFAULT_DOWNLOAD_TARGET, DEFAULT_SETTINGS, DEFAULT_TARGETS, DOMAIN, EVENT_TYPES
+from .model import ID_RE, validate_download_target, validate_targets, validate_topology
 from .transport import connect, discover_fingerprint
 
 
@@ -232,6 +232,7 @@ class Wizard:
         if user_input is not None:
             try:
                 validate_targets(user_input["targets"])
+                validate_download_target(user_input.get("download_target", DEFAULT_DOWNLOAD_TARGET))
             except (ValueError, KeyError, TypeError, ipaddress.AddressValueError):
                 errors["base"] = "invalid_targets"
             else:
@@ -239,7 +240,7 @@ class Wizard:
                 self.config["targets"] = user_input.pop("targets")
                 self.config["settings"].update(user_input)
                 return await self.async_step_menu()
-        settings = self.config["settings"]
+        settings = {**DEFAULT_SETTINGS, **self.config["settings"]}
         routers = [{"value": r["id"], "label": r["name"]} for r in self.config["routers"]]
         channels = [{"value": "internet", "label": "Whole network / Вся сеть"}]
         channels += [{"value": c["id"], "label": c["name"]} for c in self.config["channels"]]
@@ -267,6 +268,18 @@ class Wizard:
             field("alert_types", settings["alert_types"]): select(EVENT_TYPES, True),
             field("persistent_notifications", settings["persistent_notifications"]): bool,
             field("targets", self.config["targets"]): selector.ObjectSelector(),
+            field("download_channels", settings["download_channels"]): select(
+                [{"value": c["id"], "label": c["name"]} for c in self.config["channels"]], True
+            ),
+            field("download_interval", settings["download_interval"]): vol.All(
+                vol.Coerce(int), vol.Range(min=3600, max=604800)
+            ),
+            field("download_bytes", settings["download_bytes"]): vol.All(
+                vol.Coerce(int), vol.Range(min=1000000, max=20000000)
+            ),
+            field(
+                "download_target", settings.get("download_target", DEFAULT_DOWNLOAD_TARGET)
+            ): selector.ObjectSelector(),
         }
         return self.async_show_form(
             step_id="settings", data_schema=vol.Schema(schema), errors=errors

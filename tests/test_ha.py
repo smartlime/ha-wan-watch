@@ -118,3 +118,42 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
             data = await c._async_update_data()
         self.assertTrue(data["internet"])
         self.assertIsNone(data["channels"]["first"]["available"])
+
+    async def test_download_failure_is_persisted_and_not_retried_after_reload(self):
+        c = self.coordinator
+        c.config["routers"][0]["host"] = "192.0.2.1"
+        c.settings["download_channels"] = ["first"]
+        with patch.object(
+            coordinator_module,
+            "collect_download",
+            AsyncMock(return_value={"download_status": "failed", "download_mbps": None}),
+        ) as probe:
+            await c._download_due()
+            await c.async_load()
+            await c._download_due()
+            self.assertEqual(probe.await_count, 1)
+        self.assertEqual(c.downloads["first"]["download_status"], "failed")
+
+    async def test_download_stale_and_disabled_hide_old_speed(self):
+        import time
+
+        c = self.coordinator
+        c.config["routers"][0]["host"] = "192.0.2.1"
+        channel = next(x for x in c.config["channels"] if x["id"] == "first")
+        c.settings["download_channels"] = ["first"]
+        c.downloads["first"] = {
+            "signature": c._download_signature(channel),
+            "download_checked_at": time.time(),
+            "download_status": "ok",
+            "download_mbps": 20,
+        }
+        data = {"channels": {"first": {}, "second": {}}}
+        c._attach_downloads(data)
+        self.assertEqual(data["channels"]["first"]["download_mbps"], 20)
+        c.downloads["first"]["download_checked_at"] = 1
+        c._attach_downloads(data)
+        self.assertEqual(data["channels"]["first"]["download_status"], "stale")
+        self.assertIsNone(data["channels"]["first"]["download_mbps"])
+        c.settings["download_channels"] = []
+        c._attach_downloads(data)
+        self.assertEqual(data["channels"]["first"]["download_status"], "disabled")

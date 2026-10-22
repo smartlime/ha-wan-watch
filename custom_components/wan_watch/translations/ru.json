@@ -65,7 +65,11 @@
           "alert_channels": "Каналы для уведомлений (пустой список отключает уведомления)",
           "alert_types": "Типы событий для уведомлений",
           "persistent_notifications": "Показывать уведомления в Home Assistant",
-          "targets": "Адреса IPv4: address, port, server_name"
+          "targets": "Адреса IPv4: address, port, server_name",
+          "download_channels": "Каналы для короткой загрузки",
+          "download_interval": "Интервал загрузки, секунды",
+          "download_bytes": "Объём загрузки, байты",
+          "download_target": "Сервер загрузки: адрес, порт, имя, путь с {bytes}"
         }
       },
       "remove_router": {
@@ -168,7 +172,11 @@
           "alert_channels": "Каналы для уведомлений (пустой список отключает уведомления)",
           "alert_types": "Типы событий для уведомлений",
           "persistent_notifications": "Показывать уведомления в Home Assistant",
-          "targets": "Адреса IPv4: address, port, server_name"
+          "targets": "Адреса IPv4: address, port, server_name",
+          "download_channels": "Каналы для короткой загрузки",
+          "download_interval": "Интервал загрузки, секунды",
+          "download_bytes": "Объём загрузки, байты",
+          "download_target": "Сервер загрузки: адрес, порт, имя, путь с {bytes}"
         }
       },
       "remove_router": {
@@ -267,6 +275,30 @@
       },
       "notification_queue": {
         "name": "Очередь уведомлений"
+      },
+      "cpu_percent": {
+        "name": "Загрузка процессора"
+      },
+      "memory_used_percent": {
+        "name": "Занято памяти"
+      },
+      "memory_available": {
+        "name": "Доступно памяти"
+      },
+      "memory_total": {
+        "name": "Всего памяти"
+      },
+      "load_1m": {
+        "name": "Средняя нагрузка за минуту"
+      },
+      "download_mbps": {
+        "name": "Скорость короткой загрузки"
+      },
+      "download_status": {
+        "name": "Состояние замера скорости"
+      },
+      "download_checked_at": {
+        "name": "Последний замер скорости"
       }
     },
     "binary_sensor": {

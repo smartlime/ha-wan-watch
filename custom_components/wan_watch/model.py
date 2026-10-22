@@ -308,3 +308,12 @@ def safe_number(value: Any) -> float | None:
 
 def serialize_sample(sample: ChannelSample) -> dict:
     return asdict(sample)
+
+
+def validate_download_target(target):
+    validate_targets([target])
+    path = target.get("path", "")
+    if not re.fullmatch(r"/[a-zA-Z0-9_./?=&%{}-]+", path) or path.count("{bytes}") != 1:
+        raise ValueError("invalid_download_path")
+    if "{" in path.replace("{bytes}", "") or "}" in path.replace("{bytes}", ""):
+        raise ValueError("invalid_download_path")

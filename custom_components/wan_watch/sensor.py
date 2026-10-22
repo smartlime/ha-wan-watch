@@ -5,6 +5,9 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, Sen
 from .entity import WanEntity
 
 CHANNEL_SENSORS = [
+    ("download_mbps", "Скорость короткой загрузки", "Mbit/s", SensorDeviceClass.DATA_RATE, None),
+    ("download_status", "Состояние замера скорости", None, None, None),
+    ("download_checked_at", "Последний замер скорости", None, SensorDeviceClass.TIMESTAMP, None),
     ("loss", "Потери пакетов", "%", None, "quality"),
     ("latency", "Задержка", "ms", SensorDeviceClass.DURATION, "quality"),
     ("jitter", "Колебание задержки", "ms", SensorDeviceClass.DURATION, "quality"),
@@ -41,6 +44,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 None,
             )
         )
+    for router in coordinator.config["routers"]:
+        for key, name, unit in [
+            ("cpu_percent", "Загрузка процессора", "%"),
+            ("memory_used_percent", "Занято памяти", "%"),
+            ("memory_available", "Доступно памяти", "MiB"),
+            ("memory_total", "Всего памяти", "MiB"),
+            ("load_1m", "Средняя нагрузка за минуту", None),
+        ]:
+            entities.append(WanSensor(coordinator, router["id"], key, name, unit, None, None))
     entities.extend(
         [
             WanSensor(
@@ -86,6 +98,9 @@ class WanSensor(WanEntity, SensorEntity):
     @property
     def native_value(self):
         sample = self.sample
+        if self.key == "download_checked_at":
+            stamp = sample.get(self.key)
+            return datetime.fromtimestamp(stamp, UTC) if stamp else None
         if self.key == "last_outage_at":
             outage = sample.get("last_outage")
             return datetime.fromtimestamp(outage["started_at"], UTC) if outage else None
@@ -106,3 +121,20 @@ class WanSensor(WanEntity, SensorEntity):
         if self.value_group == "quality" and not self.sample.get("quality_valid"):
             return False
         return super().available and (self.native_value is not None or self.key == "last_outage_at")
+
+    @property
+    def extra_state_attributes(self):
+        attrs = super().extra_state_attributes
+        if self.key.startswith("download_"):
+            attrs.update(
+                {
+                    k: self.sample.get(k)
+                    for k in (
+                        "download_status",
+                        "download_checked_at",
+                        "download_bytes",
+                        "download_duration",
+                    )
+                }
+            )
+        return attrs

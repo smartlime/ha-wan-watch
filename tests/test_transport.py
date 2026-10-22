@@ -25,6 +25,7 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.ping_timeout = False
         self.tls_failure = False
         self.link_down = False
+        self.curl_version = "8.10.1"
         self.server = await asyncssh.create_server(
             Server, "127.0.0.1", 0, server_host_keys=[self.key], process_factory=self.process
         )
@@ -57,6 +58,10 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
                 if self.link_down
                 else "2: ppp0: <POINTOPOINT,UP,LOWER_UP> state UNKNOWN\n"
             )
+        elif args == ["curl", "--disable", "--version"]:
+            text = f"curl {self.curl_version} test\n"
+        elif "--max-filesize" in args:
+            text = "WANDOWN 200 5000000 2500000 2\n"
         elif args[0] == "curl":
             code = 28 if self.tls_failure else 0
             text = "WANWATCH 200 0.03\n" if not code else ""
@@ -130,3 +135,18 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         sample = (await self.collect())["channels"]["standby"]
         self.assertFalse(sample.reachable)
         self.assertTrue(sample.quality.valid)
+
+    async def test_bounded_download_checks_version_and_binds_standby_interface(self):
+        result = await transport.collect_download(
+            self.router, self.channel, constants.DEFAULT_DOWNLOAD_TARGET, 5000000
+        )
+        self.assertEqual(result["download_mbps"], 20)
+        self.assertEqual(self.commands[0], ["curl", "--disable", "--version"])
+        self.assertIn("if!ppp0", self.commands[1])
+        self.commands.clear()
+        self.curl_version = "8.3.0"
+        result = await transport.collect_download(
+            self.router, self.channel, constants.DEFAULT_DOWNLOAD_TARGET, 5000000
+        )
+        self.assertEqual(result["download_error"], "curl_8_4_required")
+        self.assertEqual(len(self.commands), 1)

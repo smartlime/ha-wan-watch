@@ -9,7 +9,15 @@ import time
 
 import asyncssh
 
-from .commands import link_command, metadata_commands, ping_command, tls_command
+from .commands import (
+    download_command,
+    link_command,
+    metadata_commands,
+    ping_command,
+    resource_command,
+    tls_command,
+)
+from .download import parse_download
 from .model import (
     ChannelSample,
     Probe,
@@ -22,6 +30,7 @@ from .model import (
     parse_tls,
     reachability,
 )
+from .resources import parse_resources
 
 
 class PinnedClient(asyncssh.SSHClient):
@@ -126,6 +135,12 @@ async def collect_router(
                 uptime=float(uptime.stdout.split()[0]),
             )
             counter_data = parse_counters(counters.stdout)
+            try:
+                resources = await run(resource_command())
+                if resources.exit_status == 0:
+                    result.update(parse_resources(resources.stdout))
+            except (OSError, asyncssh.Error, TimeoutError, ValueError, IndexError):
+                pass
             check_data = {}
             if busybox:
                 check = await run(["ndmc", "-c", "show ping-check"])
@@ -194,3 +209,20 @@ async def collect_router(
             result["measured"] = False
             result["error"] = type(exc).__name__
     return result
+
+
+async def collect_download(router, channel, target, size):
+    try:
+        async with await connect(router) as conn:
+            version = await command(conn, ["curl", "--disable", "--version"], 5)
+            match = re.match(r"curl (\d+)\.(\d+)\.(\d+)", version.stdout)
+            if version.exit_status or not match or tuple(map(int, match.groups())) < (8, 4, 0):
+                return {
+                    "download_mbps": None,
+                    "download_status": "failed",
+                    "download_error": "curl_8_4_required",
+                }
+            response = await command(conn, download_command(channel["interface"], target, size), 23)
+        return parse_download(response.stdout, response.exit_status, size)
+    except (OSError, asyncssh.Error, TimeoutError, ValueError):
+        return {"download_mbps": None, "download_status": "failed"}
